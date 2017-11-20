@@ -9,8 +9,9 @@ import talib
 import MySQLdb
 from random import shuffle
 from sklearn import preprocessing
-from keras.models import Sequential
-from keras.layers import Dense, Activation, LSTM
+import seq2seq
+from seq2seq.models import AttentionSeq2Seq
+
 
 con = MySQLdb.Connection(
     host='192.168.0.11',
@@ -23,14 +24,9 @@ con = MySQLdb.Connection(
 def Timesteps():
 	return 60
 
-#net = tflearn.input_data(shape=[None, Timesteps(), 2])
-model = Sequential()
-model.add(LSTM(128, input_shape=(Timesteps(), 2), return_sequences = True))
-model.add(LSTM(128, input_shape=(Timesteps(), 2), return_sequences = False))
-model.add(Dense(units=1))
-model.add(Activation("linear"))
-
-model.compile(loss="mse", optimizer="adam")
+#model.add(LSTM(128, input_shape=(Timesteps(), 2), return_sequences = True))
+model = AttentionSeq2Seq(output_dim=1, hidden_dim=24, output_length=10, input_shape=(Timesteps(), 2), depth=2)
+model.compile(loss='mse', optimizer='rmsprop')
 
 def Setup(): 
 	#Load all trade history from sqlite. 
@@ -129,7 +125,7 @@ def Round(rows, pointers):
 	for i in xrange(len(rows)):
 		rows[i] = scaler.fit_transform(rows[i])
 
-	labels = map(lambda x: x[len(x) -1:, 0], rows)
+	labels = map(lambda x: x[len(x) -10:, 0], rows)
 
 	rows = np.asarray(rows);
 
@@ -138,6 +134,7 @@ def Round(rows, pointers):
 	rows = rows[:, :Timesteps()]
 
 	labels = np.asarray(labels)
+	labels.shape = (len(labels), 10, 1)
 	rows = np.asarray(rows)
 
 	print (labels.shape, rows.shape)
@@ -145,20 +142,28 @@ def Round(rows, pointers):
 	#labels, rows = EvenOut(labels, rows)
 
 	# Start training (apply gradient descent algorithm).
-	model.fit(rows[100:], labels[100:], epochs=5, batch_size=16)
+	model.fit(rows[100:], labels[100:], epochs=3, batch_size=16)
 
 	pred = model.predict(rows[:100])
 
 	correct = 0
 	actLessThanCount = 0
 
+	for x, y in zip(pred, labels[:100]):
+		print("predicted: ", x, "actual: ", y)
+
+
+	exit()
 
 	for x, y, z in zip(pred, labels[:100], rows[:100]):
-		print("x:", x, "y", y, "z", z[len(z) -1][0])
+		x = x[len(x)-1]
+		y = y[len(y)-1]
+		z = z[len(z) -1]
+		print("predicted:", x, "actual", y, "lastdatapoint", z[0])
 
-		predLessThan = x[0] < z[len(z) -1][0]
+		predLessThan = x[0] < z[0]
 
-		actLessThan = y[0] < z[len(z) -1][0]
+		actLessThan = y[0] < z[0]
 
 		if actLessThan:
 			actLessThanCount+= 1
