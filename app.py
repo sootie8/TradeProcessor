@@ -154,7 +154,7 @@ def Round(rows, pointers):
 
 
 	for x, y, z in zip(pred, labels[:100], rows[:100]):
-		print("x:", x, "y", y, "z", z[len(z) -1][0])
+		print("predicted:", x, "actual", y, "lastdatapoint", z[len(z) -1][0])
 
 		predLessThan = x[0] < z[len(z) -1][0]
 
