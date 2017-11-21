@@ -25,6 +25,7 @@ def Timesteps():
 
 #net = tflearn.input_data(shape=[None, Timesteps(), 2])
 model = Sequential()
+#model.add(LSTM(128, input_shape=(Timesteps(), 2), return_sequences = True))
 model.add(LSTM(128, input_shape=(Timesteps(), 2), return_sequences = True))
 model.add(LSTM(128, input_shape=(Timesteps(), 2), return_sequences = False))
 model.add(Dense(units=1))
@@ -185,7 +186,7 @@ def Round(rows, pointers):
 			if predLessThan == True:
 				lessThanWrong += 1
 			else:
-				greaterThanRight += 1
+				greaterThanWrong += 1
 
 	#model.save("model.tfl")
 	print(correct)
