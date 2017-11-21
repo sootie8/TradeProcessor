@@ -154,6 +154,11 @@ def Round(rows, pointers):
 	actLessThanCount = 0
 	avgOut = 0
 
+	lessThanWrong = 0
+	lessThanRight = 0
+	greaterThanWrong = 0
+	greaterThanRight = 0
+
 
 	for x, y, z in zip(pred, labels[:100], rows[:100]):
 		x = x[0]
@@ -171,12 +176,23 @@ def Round(rows, pointers):
 			actLessThanCount+= 1
 
 		if predLessThan == actLessThan:
+			if predLessThan == True:
+				lessThanRight += 1
+			else:
+				greaterThanRight += 1
 			correct += 1
+		else:
+			if predLessThan == True:
+				lessThanWrong += 1
+			else:
+				greaterThanRight += 1
 
 	#model.save("model.tfl")
 	print(correct)
 	print(actLessThanCount)
 	print(avgOut / 100)
+
+	print("Less Than Wrong", lessThanWrong, "Less Than Right", lessThanRight, "Greater Than Wrong", greaterThanWrong, "Greater Than Right", greaterThanRight)
 
 #start the program
 
