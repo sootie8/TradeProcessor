@@ -26,7 +26,7 @@ def Timesteps():
 
 #model.add(LSTM(128, input_shape=(Timesteps(), 2), return_sequences = True))
 model = AttentionSeq2Seq(output_dim=1, hidden_dim=24, output_length=10, input_shape=(Timesteps(), 2), depth=2)
-model.compile(loss='mse', optimizer='rmsprop')
+model.compile(loss='mse', optimizer='adam')
 
 def Setup(): 
 	#Load all trade history from sqlite. 
@@ -123,7 +123,8 @@ def Round(rows, pointers):
 	scaler = preprocessing.MinMaxScaler(feature_range=(0, 1))
 
 	for i in xrange(len(rows)):
-		rows[i] = scaler.fit_transform(rows[i])
+		#rows[i] = scaler.fit_transform(rows[i])
+		rows[i] = preprocessing.scale(rows[i])
 
 	labels = map(lambda x: x[len(x) -10:, 0], rows)
 
@@ -142,7 +143,7 @@ def Round(rows, pointers):
 	#labels, rows = EvenOut(labels, rows)
 
 	# Start training (apply gradient descent algorithm).
-	model.fit(rows[100:], labels[100:], epochs=3, batch_size=16)
+	model.fit(rows[100:], labels[100:], epochs=5, batch_size=16)
 
 	pred = model.predict(rows[:100])
 
@@ -151,9 +152,6 @@ def Round(rows, pointers):
 
 	for x, y in zip(pred, labels[:100]):
 		print("predicted: ", x, "actual: ", y)
-
-
-	exit()
 
 	for x, y, z in zip(pred, labels[:100], rows[:100]):
 		x = x[len(x)-1]
