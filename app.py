@@ -146,7 +146,7 @@ def Round(rows, pointers):
 	#labels, rows = EvenOut(labels, rows)
 
 	# Start training (apply gradient descent algorithm).
-	model.fit(rows[100:], labels[100:], epochs=5, batch_size=16)
+	model.fit(rows[100:], labels[100:], epochs=5, batch_size=64)
 
 	pred = model.predict(rows[:100])
 
