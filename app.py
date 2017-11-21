@@ -123,11 +123,12 @@ def Round(rows, pointers):
 	#rows = np.asarray(rows);
 
 	#rows.shape = (len(rows), (Timesteps() + 1) *2)
-	#rows = preprocessing.scale(rows)
-	scaler = preprocessing.MinMaxScaler(feature_range=(0, 1))
+	#rows = 
+	#scaler = preprocessing.MinMaxScaler(feature_range=(0, 1))
 
 	for i in xrange(len(rows)):
-		rows[i] = scaler.fit_transform(rows[i])
+		#rows[i] = scaler.fit_transform(rows[i])
+		rows[i] = preprocessing.scale(rows[i])
 
 	labels = map(lambda x: x[len(x) -1:, 0], rows)
 
