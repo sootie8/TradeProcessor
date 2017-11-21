@@ -151,14 +151,20 @@ def Round(rows, pointers):
 
 	correct = 0
 	actLessThanCount = 0
+	avgOut = 0
 
 
 	for x, y, z in zip(pred, labels[:100], rows[:100]):
-		print("predicted:", x, "actual", y, "lastdatapoint", z[len(z) -1][0])
+		x = x[0]
+		y = y[0]
+		z = z[len(z) -1][0]
+		print("predicted:", x, "actual", y, "lastdatapoint", z)
 
-		predLessThan = x[0] < z[len(z) -1][0]
+		predLessThan = x < z
 
-		actLessThan = y[0] < z[len(z) -1][0]
+		actLessThan = y < z
+
+		avgOut += abs(x - y)
 
 		if actLessThan:
 			actLessThanCount+= 1
@@ -169,6 +175,7 @@ def Round(rows, pointers):
 	#model.save("model.tfl")
 	print(correct)
 	print(actLessThanCount)
+	print(avgOut / 100)
 
 #start the program
 
