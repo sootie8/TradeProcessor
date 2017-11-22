@@ -38,7 +38,7 @@ def Setup():
 	# Run SQL query, process rows.
 	print('before query')
 	cur = con.cursor()
-	sql = 'SELECT close, volume FROM tenminutetrades'
+	sql = 'SELECT close, volume FROM bitstamptenminutetrades'
 	cur.execute(sql)
 	rows = cur.fetchall()
 
