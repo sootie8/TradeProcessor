@@ -38,7 +38,7 @@ def Setup():
 	# Run SQL query, process rows.
 	print('before query')
 	cur = con.cursor()
-	sql = 'SELECT close, volume FROM bitstamptenminutetrades'
+	sql = 'SELECT close, volume FROM gdaxtenminutetrades WHERE closetime > 1483228800'
 	cur.execute(sql)
 	rows = cur.fetchall()
 
@@ -94,6 +94,13 @@ def generateMetricArray(rows, pointers):
 
 	return inputRows
 
+def getMovement(row):
+	startPrice = row[Timesteps() -1][0]
+	endPrice = row[len(row) -1][0]
+
+	mov = endPrice / startPrice
+	return mov
+
 
 
 def EvenOut(labels, rows):
@@ -126,6 +133,8 @@ def Round(rows, pointers):
 	#rows.shape = (len(rows), (Timesteps() + 1) *2)
 	#rows = 
 	#scaler = preprocessing.MinMaxScaler(feature_range=(0, 1))
+
+	movements = map(lambda x: getMovement(x), rows)
 
 	for i in xrange(len(rows)):
 		#rows[i] = scaler.fit_transform(rows[i])
@@ -160,8 +169,10 @@ def Round(rows, pointers):
 	greaterThanWrong = 0
 	greaterThanRight = 0
 
+	balance = 100
 
-	for x, y, z in zip(pred, labels[:100], rows[:100]):
+
+	for x, y, z, w in zip(pred, labels[:100], rows[:100], movements[:100]):
 		x = x[0]
 		y = y[0]
 		z = z[len(z) -1][0]
@@ -179,19 +190,25 @@ def Round(rows, pointers):
 		if predLessThan == actLessThan:
 			if predLessThan == True:
 				lessThanRight += 1
+				balance = balance * (1 + (1 - w))
 			else:
 				greaterThanRight += 1
+				balance = balance * w
+
 			correct += 1
 		else:
 			if predLessThan == True:
 				lessThanWrong += 1
+				balance = balance * ( 1 - (w - 1))
 			else:
 				greaterThanWrong += 1
+				balance = balance * w
 
 	#model.save("model.tfl")
 	print(correct)
 	print(actLessThanCount)
 	print(avgOut / 100)
+	print ("balance:", balance)
 
 	print("Less Than Wrong", lessThanWrong, "Less Than Right", lessThanRight, "Greater Than Wrong", greaterThanWrong, "Greater Than Right", greaterThanRight)
 
