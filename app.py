@@ -3,22 +3,14 @@ from __future__ import print_function
 import numpy as np
 import tflearn
 import json
-import psycopg2
 import math as m
-import talib
-import MySQLdb
+import sys
+import os
+import json
 from random import shuffle
 from sklearn import preprocessing
 from keras.models import Sequential
 from keras.layers import Dense, Activation, LSTM
-
-con = MySQLdb.Connection(
-    host='192.168.0.11',
-    user='new',
-    passwd='jh1995',
-    port=3306,
-    db='TradeDB'
-)
 
 def Timesteps():
 	return 60
@@ -36,16 +28,19 @@ model.compile(loss="mse", optimizer="adam")
 def Setup(): 
 	#Load all trade history from sqlite. 
 	# Run SQL query, process rows.
-	print('before query')
-	cur = con.cursor()
-	sql = 'SELECT close, volume FROM gdaxtenminutetrades WHERE closetime > 1483228800'
-	cur.execute(sql)
-	rows = cur.fetchall()
+	data_file = open('data.json','r');
+	jsonStr = data_file.read();
+
+	rows = json.loads(jsonStr)
+
+	print(len(rows))
 
 	pointers = GetPointers(rows)
 	shuffle(pointers)
 
 	rows = np.asarray(rows)
+
+	print(rows.shape)
 
 	Round(rows, pointers)
 
@@ -101,28 +96,6 @@ def getMovement(row):
 	mov = endPrice / startPrice
 	return mov
 
-
-
-def EvenOut(labels, rows):
-	lessCount = len(filter(lambda x: x[0] == 1, labels))
-	moreCount = len(filter(lambda x: x[0] == 0, labels))
-
-	maxOfEach = min(lessCount, moreCount)
-
-	lcount = 0
-	hcount = 0
-
-	less = filter(lambda xy: xy[0][0] == 1,zip(labels, rows))
-	more = filter(lambda xy: xy[0][0] == 0,zip(labels, rows))
-	less = less[:maxOfEach]
-	more = more[:maxOfEach]
-
-	newcomb = less + more
-
-	shuffle(newcomb)
-	nlabels, nrows  = zip(*newcomb)
-	return nlabels, nrows
-
 def Round(rows, pointers):
 	rows = generateMetricArray(rows, pointers)
 
@@ -134,13 +107,13 @@ def Round(rows, pointers):
 	#rows = 
 	#scaler = preprocessing.MinMaxScaler(feature_range=(0, 1))
 
-	movements = map(lambda x: getMovement(x), rows)
+	movements = list(map(lambda x: getMovement(x), rows))
 
-	for i in xrange(len(rows)):
+	for i in range(len(rows)):
 		#rows[i] = scaler.fit_transform(rows[i])
 		rows[i] = preprocessing.scale(rows[i])
 
-	labels = map(lambda x: x[len(x) -1:, 0], rows)
+	labels = list(map(lambda x: x[len(x) -1:, 0], rows))
 
 	rows = np.asarray(rows);
 
@@ -152,11 +125,13 @@ def Round(rows, pointers):
 	rows = np.asarray(rows)
 
 	print (labels.shape, rows.shape)
+
+	print (labels)
  
 	#labels, rows = EvenOut(labels, rows)
 
 	# Start training (apply gradient descent algorithm).
-	model.fit(rows[100:], labels[100:], epochs=5, batch_size=64)
+	model.fit(rows[100:], labels[100:], epochs=1, batch_size=64)
 
 	pred = model.predict(rows[:100])
 
@@ -211,7 +186,8 @@ def Round(rows, pointers):
 	print ("balance:", balance)
 
 	print("Less Than Wrong", lessThanWrong, "Less Than Right", lessThanRight, "Greater Than Wrong", greaterThanWrong, "Greater Than Right", greaterThanRight)
-
+	model.save('model.keras');
+	sys.exit()
 #start the program
 
 Setup()
