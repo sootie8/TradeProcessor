@@ -10,7 +10,8 @@ import json
 from random import shuffle
 from sklearn import preprocessing
 from keras.models import Sequential
-from keras.layers import Dense, Activation, LSTM
+from keras.layers import Dense, Activation, LSTM, Dropout
+from keras import optimizers
 
 def Timesteps():
 	return 60
@@ -18,12 +19,14 @@ def Timesteps():
 #net = tflearn.input_data(shape=[None, Timesteps(), 2])
 model = Sequential()
 #model.add(LSTM(128, input_shape=(Timesteps(), 2), return_sequences = True))
-model.add(LSTM(128, input_shape=(Timesteps(), 2), return_sequences = True))
-model.add(LSTM(128, input_shape=(Timesteps(), 2), return_sequences = False))
+model.add(LSTM(128, input_shape=(Timesteps(), 4), return_sequences = True))
+model.add(Dropout(0.2))
+model.add(LSTM(128, input_shape=(Timesteps(), 4), return_sequences = False))
+model.add(Dropout(0.2))
 model.add(Dense(units=1))
 model.add(Activation("linear"))
 
-model.compile(loss="mse", optimizer="adam")
+model.compile(loss="mse", optimizer='adam')
 
 def Setup(): 
 	#Load all trade history from sqlite. 
@@ -33,14 +36,10 @@ def Setup():
 
 	rows = json.loads(jsonStr)
 
-	print(len(rows))
-
 	pointers = GetPointers(rows)
 	shuffle(pointers)
 
 	rows = np.asarray(rows)
-
-	print(rows.shape)
 
 	Round(rows, pointers)
 
@@ -52,7 +51,7 @@ def GetPointers(rows):
 	pointers = []
 	backpointer = 0
 	middlepointer = Timesteps() -1
-	forwardpointer = Timesteps() + 9
+	forwardpointer = Timesteps() + 30
 
 	while forwardpointer < len(rows) -1:
 		forwardpointer += 1
@@ -83,7 +82,13 @@ def generateMetricArray(rows, pointers):
 
 	for x, y, z in pointers:
 		inputSet = rows[x:z+1]
+		#Remove not needed data between middle and forward pointer.
+
+		inputSet = inputSet[:Timesteps() + 1] + inputSet[-1]
 		#Calculate metrics if we want to or not, shape input data.
+
+		#filter out volume
+		#inputSet = inputSet[:, :1]
 
 		inputRows.append(inputSet)
 
@@ -109,29 +114,33 @@ def Round(rows, pointers):
 
 	movements = list(map(lambda x: getMovement(x), rows))
 
-	for i in range(len(rows)):
-		#rows[i] = scaler.fit_transform(rows[i])
-		rows[i] = preprocessing.scale(rows[i])
-
-	labels = list(map(lambda x: x[len(x) -1:, 0], rows))
+	labels = list(map(lambda x: x[-1], rows))
+	labels = np.asarray(labels)
 
 	rows = np.asarray(rows);
 
-	print(rows.shape)
-
 	rows = rows[:, :Timesteps()]
 
+	for i in range(len(rows)):
+		#rows[i] = scaler.fit_transform(rows[i])
+		#rows[i] = preprocessing.scale(rows[i])
+		scaler = preprocessing.StandardScaler()
+		#scaler = preprocessing.MinMaxScaler(feature_range=(0, 1))
+		scaler = scaler.fit(rows[i])
+		rows[i] = scaler.transform(rows[i])
+
+		labels[i] = scaler.transform([labels[i]])[0]
+
+	labels = labels[:, 0]
 	labels = np.asarray(labels)
 	rows = np.asarray(rows)
 
 	print (labels.shape, rows.shape)
-
-	print (labels)
  
 	#labels, rows = EvenOut(labels, rows)
 
 	# Start training (apply gradient descent algorithm).
-	model.fit(rows[100:], labels[100:], epochs=1, batch_size=64)
+	model.fit(rows[100:], labels[100:], epochs=2, batch_size=128)
 
 	pred = model.predict(rows[:100])
 
@@ -146,11 +155,16 @@ def Round(rows, pointers):
 
 	balance = 100
 
+	xCorrect = 0
+
 
 	for x, y, z, w in zip(pred, labels[:100], rows[:100], movements[:100]):
+		#Predicted Value
 		x = x[0]
-		y = y[0]
-		z = z[len(z) -1][0]
+		#Actual value label. 
+		y = y
+		#Last Value in 60.
+		z = z[-1][0]
 		print("predicted:", x, "actual", y, "lastdatapoint", z)
 
 		predLessThan = x < z
@@ -161,6 +175,9 @@ def Round(rows, pointers):
 
 		if actLessThan:
 			actLessThanCount+= 1
+
+		if predLessThan == actLessThan:
+			xCorrect += 1
 
 		if predLessThan == actLessThan:
 			if predLessThan == True:
@@ -180,6 +197,7 @@ def Round(rows, pointers):
 				balance = balance * w
 
 	#model.save("model.tfl")
+	print(xCorrect)
 	print(correct)
 	print(actLessThanCount)
 	print(avgOut / 100)
